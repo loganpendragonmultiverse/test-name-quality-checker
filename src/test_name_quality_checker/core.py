@@ -24,9 +24,11 @@ def _called_subject(node: ast.AST, fallback: str) -> str:
     return re.sub(r"\W+", "_", fallback).strip("_").casefold()
 
 
-def scan(root: Path) -> dict[str, Any]:
+def scan(root: Path, max_name_length: int = 80) -> dict[str, Any]:
     if not root.is_dir():
         raise ValueError("root must be a directory")
+    if max_name_length < 20:
+        raise ValueError("max-name-length must be at least 20")
     tests = []
     parse_errors = []
     paths = sorted({*root.rglob("test_*.py"), *root.rglob("*_test.py")})
@@ -61,6 +63,8 @@ def scan(root: Path) -> dict[str, Any]:
             reasons.append("vague")
         if len(by_name[test["name"]]) > 1:
             reasons.append("duplicate")
+        if len(str(test["name"])) > max_name_length:
+            reasons.append("overlong")
         if reasons:
             findings.append(
                 {
@@ -69,12 +73,19 @@ def scan(root: Path) -> dict[str, Any]:
                     "suggestion": f"test_{test['subject']}_describes_expected_behavior",
                 }
             )
+    file_summary: dict[str, dict[str, int]] = {}
+    for test in tests:
+        file_summary.setdefault(str(test["file"]), {"tests": 0, "findings": 0})["tests"] += 1
+    for finding in findings:
+        file_summary[str(finding["file"])]["findings"] += 1
     return {
         "version": 1,
+        "max_name_length": max_name_length,
         "files_scanned": len(paths),
         "tests_found": len(tests),
         "finding_count": len(findings),
         "findings": findings,
+        "files": file_summary,
         "parse_errors": parse_errors,
     }
 

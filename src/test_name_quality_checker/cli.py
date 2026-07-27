@@ -15,9 +15,10 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--format", choices=("markdown", "json"), default="markdown")
     parser.add_argument("--output", type=Path)
     parser.add_argument("--fail-on-findings", action="store_true")
+    parser.add_argument("--max-name-length", type=int, default=80)
     args = parser.parse_args(argv)
     try:
-        report = scan(args.root)
+        report = scan(args.root, args.max_name_length)
         rendered = render_json(report) if args.format == "json" else render_markdown(report)
         if args.output:
             if args.output.exists():

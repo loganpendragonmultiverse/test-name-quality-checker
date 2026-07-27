@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "test-name-quality-checker"
-version = "1.0.0"
+version = "1.1.0"
 description = "Flag vague or duplicated Python test names and suggest behavior-oriented replacements."
 readme = "README.md"
 requires-python = ">=3.10"

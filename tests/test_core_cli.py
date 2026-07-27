@@ -17,6 +17,7 @@ def test_scan_finds_vague_and_duplicate_names(tmp_path):
     assert report["finding_count"] == 2
     assert report["findings"][0]["reasons"] == ["vague", "duplicate"]
     assert report["findings"][0]["suggestion"] == "test_parse_record_describes_expected_behavior"
+    assert report["files"]["test_one.py"] == {"tests": 1, "findings": 1}
     assert "Consider" in render_markdown(report)
 
 
@@ -47,3 +48,15 @@ def test_subject_from_method_and_fallback(tmp_path):
     report = scan(tmp_path)
     assert report["findings"][0]["subject"] == "fetch"
     assert report["findings"][1]["subject"] == "test_methods"
+
+
+def test_overlong_names_and_configurable_limit(tmp_path):
+    (tmp_path / "test_long.py").write_text(
+        "def test_parser_returns_a_clear_record_when_the_supplied_identifier_is_valid():\n    parse()\n",
+        encoding="utf-8",
+    )
+    report = scan(tmp_path, max_name_length=40)
+    assert report["findings"][0]["reasons"] == ["overlong"]
+    with pytest.raises(ValueError, match="at least 20"):
+        scan(tmp_path, max_name_length=10)
+    assert main([str(tmp_path), "--max-name-length", "40", "--fail-on-findings"]) == 1
