@@ -10,9 +10,10 @@ Test Name Quality Checker scans Python test functions and methods, flags vague o
 python -m pip install .
 test-name-check .
 test-name-check . --fail-on-findings
+test-name-check . --max-name-length 80
 ```
 
-The scanner uses Python's AST and never imports or executes the tested project. Markdown and JSON reports include file and line evidence, reasons, suggestions, and parse errors. The optional failure flag supports gradual CI adoption.
+The scanner uses Python's AST and never imports or executes the tested project. Version 1.1 adds configurable overlong-name findings plus per-file test/finding summaries. Markdown and JSON reports include file and line evidence, reasons, suggestions, and parse errors. The optional failure flag supports gradual CI adoption.
 
 Suggestions are mechanical prompts, not authoritative names. They cannot infer business intent or expected behavior and should be rewritten by a maintainer. Version 1 targets Python test functions only. Requires Python 3.10 or newer.
 
