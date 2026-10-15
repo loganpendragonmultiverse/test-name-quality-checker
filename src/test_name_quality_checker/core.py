@@ -27,7 +27,8 @@ def _called_subject(node: ast.AST, fallback: str) -> str:
 def _test_nodes(
     tree: ast.AST,
     parents: tuple[str, ...] = (),
-) -> list[tuple[ast.FunctionDef | ast.AsyncFunctionDef, tuple[str, ...]]]:
+    occurrences: tuple[str, ...] = (),
+) -> list[tuple[ast.FunctionDef | ast.AsyncFunctionDef, tuple[str, ...], tuple[str, ...]]]:
     """Visit definitions in source order and retain their lexical container."""
     result = []
     for child in ast.iter_child_nodes(tree):
@@ -35,10 +36,16 @@ def _test_nodes(
             if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef)) and child.name.startswith(
                 "test"
             ):
-                result.append((child, parents))
-            result.extend(_test_nodes(child, (*parents, child.name)))
+                result.append((child, parents, occurrences))
+            result.extend(
+                _test_nodes(
+                    child,
+                    (*parents, child.name),
+                    (*occurrences, f"{child.lineno}:{child.col_offset}"),
+                )
+            )
         else:
-            result.extend(_test_nodes(child, parents))
+            result.extend(_test_nodes(child, parents, occurrences))
     return result
 
 
@@ -63,7 +70,7 @@ def scan(
         except (OSError, UnicodeError, SyntaxError) as exc:
             parse_errors.append({"file": relative, "error": str(exc)})
             continue
-        for node, parents in _test_nodes(tree):
+        for node, parents, occurrences in _test_nodes(tree):
             tests.append(
                 {
                     "file": relative,
@@ -72,6 +79,7 @@ def scan(
                     "qualified_name": ".".join((*parents, node.name)),
                     "identity": f"{relative}::{'.'.join((*parents, node.name))}:{node.lineno}",
                     "container": ".".join(parents),
+                    "container_id": "/".join(occurrences),
                     "subject": _called_subject(node, path.stem),
                 }
             )
@@ -81,7 +89,7 @@ def scan(
             return (str(test["name"]),)
         if duplicate_scope == "module":
             return (str(test["file"]), str(test["name"]))
-        return (str(test["file"]), str(test["container"]), str(test["name"]))
+        return (str(test["file"]), str(test["container_id"]), str(test["name"]))
 
     by_name: dict[tuple[str, ...], list[dict[str, Any]]] = defaultdict(list)
     for test in tests:

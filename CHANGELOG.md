@@ -2,6 +2,8 @@
 
 ## 1.2.0 - Unreleased
 
+- Distinguish repeated same-name lexical container definitions in class scope using source locations.
+
 - Report qualified names and source identities for synchronous, async, and nested test definitions.
 - Add class, module, and suite duplicate scopes, keeping suite scope as the default.
 

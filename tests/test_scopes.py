@@ -66,3 +66,24 @@ def test_nested_classes_and_vague_names_still_reported(tmp_path):
     report = scan(tmp_path, duplicate_scope="class")
     assert [x["reasons"] for x in report["findings"]] == [["vague"], ["vague"]]
     assert report["findings"][0]["qualified_name"] == "Outer.Inner.test_basic"
+
+
+@pytest.mark.parametrize(
+    "definition",
+    [
+        "class TestRepeated:\n    def test_saves_record(self): pass\n",
+        "def helper():\n    async def test_saves_record(): pass\n",
+        "class Outer:\n    class Inner:\n        def test_saves_record(self): pass\n",
+    ],
+)
+def test_repeated_container_definitions_remain_distinct(tmp_path, definition):
+    (tmp_path / "test_repeated.py").write_text(definition + "\n" + definition, encoding="utf-8")
+    local = scan(tmp_path, duplicate_scope="class")
+    assert local["tests_found"] == 2
+    assert local["finding_count"] == 0
+    for scope in ("module", "suite"):
+        report = scan(tmp_path, duplicate_scope=scope)
+        assert report["finding_count"] == 2
+        assert all(f["reasons"] == ["duplicate"] for f in report["findings"])
+        assert len({f["qualified_name"] for f in report["findings"]}) == 1
+        assert len({f["container_id"] for f in report["findings"]}) == 2
