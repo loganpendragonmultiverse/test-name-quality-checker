@@ -18,3 +18,7 @@ The scanner uses Python's AST and never imports or executes the tested project. 
 Suggestions are mechanical prompts, not authoritative names. They cannot infer business intent or expected behavior and should be rewritten by a maintainer. Version 1 targets Python test functions only. Requires Python 3.10 or newer.
 
 Part of the [Logan Pendragon Forge open-source collection](https://www.loganpendragonforge.com/open-source/). Licensed under the [MIT License](LICENSE).
+
+## Qualified identities and duplicate scopes
+
+`--duplicate-scope suite` preserves the default: compare short test names across every scanned file. Choose `module` to compare names within each file, or `class` to compare within each lexical container (a class, enclosing function, or the module for top-level tests). The Python API accepts `scan(root, duplicate_scope="class")`. Function and async definitions retain source order and qualified names such as `TestCart.test_saves_record`; nested definitions remain included. Finding `identity` combines relative file, qualified name, and source line to distinguish repeated definitions. Class scope therefore separates methods in different classes while still flagging repeated methods in one class. Reports describe AST definitions rather than runtime test collection; no project code is imported or executed.

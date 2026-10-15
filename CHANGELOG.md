@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.0 - Unreleased
+
+- Report qualified names and source identities for synchronous, async, and nested test definitions.
+- Add class, module, and suite duplicate scopes, keeping suite scope as the default.
+
 ## 1.1.0 - 2026-07-27
 
 - Added configurable overlong-name findings and a CLI name-length limit.

@@ -24,11 +24,33 @@ def _called_subject(node: ast.AST, fallback: str) -> str:
     return re.sub(r"\W+", "_", fallback).strip("_").casefold()
 
 
-def scan(root: Path, max_name_length: int = 80) -> dict[str, Any]:
+def _test_nodes(
+    tree: ast.AST,
+    parents: tuple[str, ...] = (),
+) -> list[tuple[ast.FunctionDef | ast.AsyncFunctionDef, tuple[str, ...]]]:
+    """Visit definitions in source order and retain their lexical container."""
+    result = []
+    for child in ast.iter_child_nodes(tree):
+        if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef)) and child.name.startswith(
+                "test"
+            ):
+                result.append((child, parents))
+            result.extend(_test_nodes(child, (*parents, child.name)))
+        else:
+            result.extend(_test_nodes(child, parents))
+    return result
+
+
+def scan(
+    root: Path, max_name_length: int = 80, *, duplicate_scope: str = "suite"
+) -> dict[str, Any]:
     if not root.is_dir():
         raise ValueError("root must be a directory")
     if max_name_length < 20:
         raise ValueError("max-name-length must be at least 20")
+    if duplicate_scope not in {"class", "module", "suite"}:
+        raise ValueError("duplicate-scope must be class, module, or suite")
     tests = []
     parse_errors = []
     paths = sorted({*root.rglob("test_*.py"), *root.rglob("*_test.py")})
@@ -41,27 +63,35 @@ def scan(root: Path, max_name_length: int = 80) -> dict[str, Any]:
         except (OSError, UnicodeError, SyntaxError) as exc:
             parse_errors.append({"file": relative, "error": str(exc)})
             continue
-        for node in ast.walk(tree):
-            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name.startswith(
-                "test"
-            ):
-                tests.append(
-                    {
-                        "file": relative,
-                        "line": node.lineno,
-                        "name": node.name,
-                        "subject": _called_subject(node, path.stem),
-                    }
-                )
-    by_name: dict[str, list[dict[str, Any]]] = defaultdict(list)
+        for node, parents in _test_nodes(tree):
+            tests.append(
+                {
+                    "file": relative,
+                    "line": node.lineno,
+                    "name": node.name,
+                    "qualified_name": ".".join((*parents, node.name)),
+                    "identity": f"{relative}::{'.'.join((*parents, node.name))}:{node.lineno}",
+                    "container": ".".join(parents),
+                    "subject": _called_subject(node, path.stem),
+                }
+            )
+
+    def duplicate_key(test: dict[str, Any]) -> tuple[str, ...]:
+        if duplicate_scope == "suite":
+            return (str(test["name"]),)
+        if duplicate_scope == "module":
+            return (str(test["file"]), str(test["name"]))
+        return (str(test["file"]), str(test["container"]), str(test["name"]))
+
+    by_name: dict[tuple[str, ...], list[dict[str, Any]]] = defaultdict(list)
     for test in tests:
-        by_name[test["name"]].append(test)
+        by_name[duplicate_key(test)].append(test)
     findings = []
     for test in tests:
         reasons = []
         if VAGUE.fullmatch(test["name"]):
             reasons.append("vague")
-        if len(by_name[test["name"]]) > 1:
+        if len(by_name[duplicate_key(test)]) > 1:
             reasons.append("duplicate")
         if len(str(test["name"])) > max_name_length:
             reasons.append("overlong")
@@ -81,6 +111,7 @@ def scan(root: Path, max_name_length: int = 80) -> dict[str, Any]:
     return {
         "version": 1,
         "max_name_length": max_name_length,
+        "duplicate_scope": duplicate_scope,
         "files_scanned": len(paths),
         "tests_found": len(tests),
         "finding_count": len(findings),
@@ -100,7 +131,7 @@ def render_markdown(report: dict[str, Any]) -> str:
     for finding in report["findings"]:
         lines.extend(
             [
-                f"- `{finding['file']}:{finding['line']}` — `{finding['name']}` ({', '.join(finding['reasons'])})",
+                f"- `{finding['file']}:{finding['line']}` — `{finding['qualified_name']}` ({', '.join(finding['reasons'])})",
                 f"  - Consider: `{finding['suggestion']}`",
             ]
         )
