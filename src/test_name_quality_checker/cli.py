@@ -16,9 +16,15 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--output", type=Path)
     parser.add_argument("--fail-on-findings", action="store_true")
     parser.add_argument("--max-name-length", type=int, default=80)
+    parser.add_argument(
+        "--duplicate-scope",
+        choices=("class", "module", "suite"),
+        default="suite",
+        help="compare names within a lexical container, file, or whole scan",
+    )
     args = parser.parse_args(argv)
     try:
-        report = scan(args.root, args.max_name_length)
+        report = scan(args.root, args.max_name_length, duplicate_scope=args.duplicate_scope)
         rendered = render_json(report) if args.format == "json" else render_markdown(report)
         if args.output:
             if args.output.exists():
