@@ -4,6 +4,10 @@
 
 Test Name Quality Checker scans Python test functions and methods, flags vague or duplicated names, and proposes behavior-oriented naming templates based on the first called subject it can identify.
 
+## Version 1.2.0
+
+Report qualified names and source identities for synchronous, async, and nested test definitions. Add class, module, and suite duplicate scopes, keeping suite scope as the default.
+
 ## Three-minute start
 
 ```bash

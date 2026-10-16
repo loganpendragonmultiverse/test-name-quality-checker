@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.2.0 - Unreleased
+## 1.2.0 - 2026-10-16
 
 - Distinguish repeated same-name lexical container definitions in class scope using source locations.
 
