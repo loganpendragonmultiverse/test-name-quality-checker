@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.2.1 - 2026-10-19
+
+- Count only included scan attempts, retaining parse-error attempts.
+- Create report files exclusively and return actionable output/closed-pipe errors without replacing existing destinations.
+- Render authored paths and parser diagnostics as literal Markdown text.
+- Include handoff documents, license and the existing example in wheel and source packages.
+
 ## 1.2.0 - 2026-10-16
 
 - Distinguish repeated same-name lexical container definitions in class scope using source locations.
