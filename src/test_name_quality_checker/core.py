@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ast
+import html
 import json
 import re
 from collections import defaultdict
@@ -60,11 +61,13 @@ def scan(
         raise ValueError("duplicate-scope must be class, module, or suite")
     tests = []
     parse_errors = []
+    files_scanned = 0
     paths = sorted({*root.rglob("test_*.py"), *root.rglob("*_test.py")})
     for path in paths:
         if any(part in {".git", ".venv", "build", "dist"} for part in path.parts):
             continue
         relative = path.relative_to(root).as_posix()
+        files_scanned += 1
         try:
             tree = ast.parse(path.read_text(encoding="utf-8"), filename=relative)
         except (OSError, UnicodeError, SyntaxError) as exc:
@@ -120,13 +123,19 @@ def scan(
         "version": 1,
         "max_name_length": max_name_length,
         "duplicate_scope": duplicate_scope,
-        "files_scanned": len(paths),
+        "files_scanned": files_scanned,
         "tests_found": len(tests),
         "finding_count": len(findings),
         "findings": findings,
         "files": file_summary,
         "parse_errors": parse_errors,
     }
+
+
+def _markdown_literal(value: str) -> str:
+    """Keep authored paths and parser diagnostics as literal report text."""
+    special = "\\`*_{}[]()#+-.!|\r\n"
+    return "".join(f"&#{ord(char)};" if char in special else html.escape(char) for char in value)
 
 
 def render_markdown(report: dict[str, Any]) -> str:
@@ -139,13 +148,16 @@ def render_markdown(report: dict[str, Any]) -> str:
     for finding in report["findings"]:
         lines.extend(
             [
-                f"- `{finding['file']}:{finding['line']}` — `{finding['qualified_name']}` ({', '.join(finding['reasons'])})",
+                f"- {_markdown_literal(str(finding['file']))}:{finding['line']} — `{finding['qualified_name']}` ({', '.join(finding['reasons'])})",
                 f"  - Consider: `{finding['suggestion']}`",
             ]
         )
     if report["parse_errors"]:
         lines.extend(["", "## Parse errors", ""])
-        lines.extend(f"- `{item['file']}` — {item['error']}" for item in report["parse_errors"])
+        lines.extend(
+            f"- {_markdown_literal(str(item['file']))} — {_markdown_literal(str(item['error']))}"
+            for item in report["parse_errors"]
+        )
     return "\n".join(lines).rstrip() + "\n"
 
 
