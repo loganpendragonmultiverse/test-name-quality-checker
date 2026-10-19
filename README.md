@@ -12,7 +12,7 @@ Test Name Quality Checker scans Python test functions and methods, flags vague o
 
 ## 1.2.1 — 2026-10-19
 
-Scan totals count included file read attempts, including parse errors, and exclude ignored candidate paths. Reports use exclusive file creation, preserving existing files and dangling report symlinks. Failed terminal writes return status 2 with a diagnostic. Markdown keeps authored filenames and parser messages literal. AST discovery, source identities, duplicate scopes and mechanical suggestions are unchanged.
+Scan totals count included file read attempts, including parse errors, and exclude ignored candidate paths. Reports refuse pre-existing report symlinks, including dangling links, before exclusive file creation. Failed terminal writes return status 2 with a diagnostic. Markdown keeps authored filenames and parser messages literal. AST discovery, source identities, duplicate scopes and mechanical suggestions are unchanged.
 
 ## Version 1.2.0
 
@@ -41,6 +41,8 @@ Class-scope grouping uses each enclosing definition occurrence, including its so
 
 ## Reports and limits
 
-Existing report destinations are never replaced. A report symlink, including a dangling one, is a collision; choose a new path. Parent directories must already exist. Report creation is exclusive, but an interrupted write may leave an incomplete new report; inspect it and choose another destination before retrying. The scanner does not modify Python source files. Scan counts include attempted reads of included files even when parsing fails, and exclude candidates beneath .git, .venv, build and dist.
+Existing report destinations are never replaced. Pre-existing report symlinks, including dangling ones, are refused before opening; choose a new path. Parent directories must already exist. Report creation is exclusive, but an interrupted write may leave an incomplete new report; inspect it and choose another destination before retrying. The scanner does not modify Python source files. Scan counts include attempted reads of included files even when parsing fails, and exclude candidates beneath .git, .venv, build and dist.
 
 A closed stdout pipe or another terminal-write failure returns status 2. Markdown presents filenames and parse diagnostics as literal text; JSON preserves their original strings. Reports remain local review material and can include source paths or parser diagnostics. This AST utility does not prove tests are good, discover every runtime test, or execute tests.
+
+The pre-open symlink check and exclusive creation protect the documented ordinary destinations. They are not an atomic defense against hostile leaf-link replacement or parent-directory races.

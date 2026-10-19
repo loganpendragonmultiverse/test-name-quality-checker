@@ -103,6 +103,27 @@ def test_report_symlinks_preserve_target_and_link(tmp_path, dangling):
         assert target.read_bytes() == b"target sentinel"
 
 
+def test_recognized_report_symlink_is_refused_before_open(tmp_path, monkeypatch, capsys):
+    populate(tmp_path)
+    output = tmp_path / "report.md"
+    original_is_symlink = Path.is_symlink
+    original_open = Path.open
+
+    def known_symlink(path):
+        return path == output or original_is_symlink(path)
+
+    def fail_if_report_opened(path, *args, **kwargs):
+        if path == output:
+            pytest.fail("recognized report symlink must not be opened")
+        return original_open(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "is_symlink", known_symlink)
+    monkeypatch.setattr(Path, "open", fail_if_report_opened)
+    assert cli.main([str(tmp_path), "--output", str(output)]) == 2
+    assert "symlink" in capsys.readouterr().err
+    assert not output.exists()
+
+
 def test_racing_destination_is_not_overwritten(tmp_path, monkeypatch):
     source = populate(tmp_path)
     before = source.read_bytes()

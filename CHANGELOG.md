@@ -2,6 +2,8 @@
 
 ## 1.2.1 - 2026-10-19
 
+- Refuse pre-existing report symlinks before exclusive open, including dangling Windows links.
+
 - Count only included scan attempts, retaining parse-error attempts.
 - Create report files exclusively and return actionable output/closed-pipe errors without replacing existing destinations.
 - Render authored paths and parser diagnostics as literal Markdown text.
